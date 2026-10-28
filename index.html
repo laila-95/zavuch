@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мектеп Завучының Бақылау Жүйесі</title>
+    <!-- Tailwind CSS & FontAwesome Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS (Excel экспорттау және оқу үшін) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Жоғарғы Навигация / Header -->
+    <header class="bg-indigo-900 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid font-bold text-2xl fa-school text-amber-400"></i>
+                <h1 class="text-xl font-bold tracking-wide">Мектеп Завучының Интерактивті Бақылау Жүйесі</h1>
+            </div>
+            <div id="userStatus" class="flex items-center space-x-4">
+                <span id="roleBadge" class="bg-indigo-700 px-3 py-1 rounded-full text-xs font-semibold tracking-wide">Жүйеге кіріңіз</span>
+                <button id="logoutBtn" onclick="logout()" class="hidden text-xs bg-red-600 hover:bg-red-700 text-white font-semibold py-1.5 px-3 rounded transition duration-200">
+                    <i class="fa-solid fa-right-from-bracket mr-1"></i>Шығу
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- БЕТ 1: Ауысымды Анықтау / Авторизация -->
+    <main id="authPage" class="flex-grow flex items-center justify-center p-6">
+        <div class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-200 text-center">
+            <div class="w-16 h-16 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fa-solid fa-user-gear"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Лауазымды таңдаңыз</h2>
+            <p class="text-slate-5-00 text-sm mb-6">Бақылау жүргізу үшін өз ауысымыңызға сәйкес Завуч рөлін таңдаңыз</p>
+
+            <div class="space-y-4">
+                <button onclick="login('shift1')" class="w-full flex items-center justify-between p-4 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition duration-200 group">
+                    <div class="flex items-center space-x-3">
+                        <span class="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold">1</span>
+                        <div class="text-left">
+                            <p class="font-semibold text-indigo-950">1-ші Ауысым Завучы</p>
+                            <p class="text-xs text-slate-500">Жоғары сыныптар (8, 9, 10, 11 сыныптар)</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-indigo-400 group-hover:translate-x-1 transition"></i>
+                </button>
+
+                <button onclick="login('shift2')" class="w-full flex items-center justify-between p-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition duration-200 group">
+                    <div class="flex items-center space-x-3">
+                        <span class="w-10 h-10 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">2</span>
+                        <div class="text-left">
+                            <p class="font-semibold text-emerald-950">2-ші Ауысым Завучы</p>
+                            <p class="text-xs text-slate-500">Бастауыш және орта сыныптар (5, 6, 7 сыныптар)</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-emerald-400 group-hover:translate-x-1 transition"></i>
+                </button>
+
+                <button onclick="login('admin')" class="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-xl transition duration-200 group">
+                    <div class="flex items-center space-x-3">
+                        <span class="w-10 h-10 rounded-lg bg-slate-700 text-white flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-crown"></i>
+                        </span>
+                        <div class="text-left">
+                            <p class="font-semibold text-slate-900">Мектеп Администраторы / Директор</p>
+                            <p class="text-xs text-slate-500">Барлық ауысымды толық көру және есеп алу</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-400 group-hover:translate-x-1 transition"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- БЕТ 2: Бақылау Басқару Панелі (Dashboard) -->
+    <main id="dashboardPage" class="hidden flex-grow max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+
+        <!-- Статистикалық карточкалар -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-semibold text-slate-500 uppercase">Жалпы мұғалімдер</p>
+                <p id="statTotal" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-semibold text-slate-500 uppercase">⚪ Күтілуде</p>
+                <p id="statPending" class="text-2xl font-bold text-slate-400 mt-1">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-semibold text-slate-500 uppercase">🟢 Бүгін сабағы жоқ / Қалыпты</p>
+                <p id="statOk" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-semibold text-slate-500 uppercase">🟡 ҚМЖ Жоқ / Кешікті</p>
+                <p id="statWarn" class="text-2xl font-bold text-amber-500 mt-1">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <p class="text-xs font-semibold text-slate-500 uppercase">🔴 Себепсіз кірмеді</p>
+                <p id="statAbsent" class="text-2xl font-bold text-rose-600 mt-1">0</p>
+            </div>
+        </div>
+
+        <!-- Іздеу, Фильтр және Экспорт Басқару Түймелері -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <div class="relative w-full md:w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
+                    <input type="text" id="searchInput" oninput="filterTeachers()" placeholder="Мұғалім аты немесе пән..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <select id="shiftFilter" onchange="filterTeachers()" class="py-2 px-3 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="all">Барлық ауысымдар</option>
+                    <option value="1">1-ші Ауысым</option>
+                    <option value="2">2-ші Ауысым</option>
+                </select>
+                <select id="statusFilter" onchange="filterTeachers()" class="py-2 px-3 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="all">Барлық мәртебелер</option>
+                    <option value="pending">⚪ Күтілуде</option>
+                    <option value="no_lesson">🟢 Бүгін сабағы жоқ</option>
+                    <option value="normal">🟢 Қалыпты (Сабақта/ҚМЖ бар)</option>
+                    <option value="no_plan">🟡 1-ші ескерту (ҚМЖ жоқ)</option>
+                    <option value="late">🟠 2-ші ескерту (Сабаққа кешікті)</option>
+                    <option value="absent">🔴 3-ші ескерту (Себепсіз кірмеді)</option>
+                </select>
+            </div>
+
+            <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center space-x-2 transition shadow">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>Есепті жүктеу (.xlsx)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Түгендеу Кестесі -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left border-collapse">
+                    <thead class="bg-slate-800 text-white uppercase text-xs font-semibold tracking-wider">
+                        <tr>
+                            <th class="py-3 px-4">№</th>
+                            <th class="py-3 px-4">Мұғалімнің Аты-жөні</th>
+                            <th class="py-3 px-4">Пәні</th>
+                            <th class="py-3 px-4">Сыныптары</th>
+                            <th class="py-3 px-4">Ауысым</th>
+                            <th class="py-3 px-4">Мәртебесі / Жағдайы</th>
+                            <th class="py-3 px-4 text-center">Завуч Белгілеу Батырмалары</th>
+                        </tr>
+                    </thead>
+                    <tbody id="teacherTableBody" class="divide-y divide-slate-200">
+                        <!-- Деректер JavaScript арқылы динамикалы түрде салынады -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Төменгі Колонтитул / Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            © 2026 Мектепті Бақылау және Түгендеу Веб-Жүйесі. Автоматтандырылған Завуч Панелі.
+        </div>
+    </footer>
+
+    <script>
+        // Мұғалімдер тізімі мен сабақ кестесінен алынған біріктірілген база
+        const teachersData = [
+            // 1-ші Ауысым Мұғалімдері (8-11 сыныптар)
+            { id: 1, name: "Абуова М.", subject: "Қазақ тілі", classes: "11А, 9Б", shift: 1, status: "pending" },
+            { id: 2, name: "Абдугаппарова М.", subject: "Ағылшын тілі", classes: "8А, 8Д, 8Е, 9Б, 9Е", shift: 1, status: "pending" },
+            { id: 3, name: "Азизбеков А.", subject: "Дене шынықтыру", classes: "9Е", shift: 1, status: "pending" },
+            { id: 4, name: "Алканова Г.", subject: "Химия", classes: "8Г, 8Л, 9Е, 10А, 11Э", shift: 1, status: "pending" },
+            { id: 5, name: "Амангелді Р.", subject: "Биология", classes: "9Д, 10А, 11Э", shift: 1, status: "pending" },
+            { id: 6, name: "Атығаев Б.", subject: "Қазақстан тарихы", classes: "8А, 8Е, 9Д, 9Е, 10Г, 11А", shift: 1, status: "pending" },
+            { id: 7, name: "Асылхан Б.", subject: "Қазақстан тарихы", classes: "8Д", shift: 1, status: "pending" },
+            { id: 8, name: "Аружан А.", subject: "Ағылшын тілі", classes: "8Г, 8Д", shift: 1, status: "pending" },
+            { id: 9, name: "Баймуратова Ш.", subject: "Қазақ тілі", classes: "9В, 10В, 10Г, 11Б", shift: 1, status: "pending" },
+            { id: 10, name: "Досбергенова Р.", subject: "Орыс тілі", classes: "8А, 8В, 8Г, 8Д, 8В", shift: 1, status: "pending" },
+            { id: 11, name: "Джаркенова М.", subject: "Қазақ тілі", classes: "8Л, 8В, 9Е, 10Б", shift: 1, status: "pending" },
+            { id: 12, name: "Дуйсек Б.", subject: "Математика", classes: "8В", shift: 1, status: "pending" },
+            { id: 13, name: "Ерзақ Б.", subject: "Математика", classes: "8А, 9Б, 9Г, 10Э", shift: 1, status: "pending" },
+            { id: 14, name: "Есетова А.", subject: "Ағылшын тілі", classes: "8Г, 8Е, 8Л, 9Б, 10А, 10Э", shift: 1, status: "pending" },
+            { id: 15, name: "Ерғалиева С.", subject: "Дене шынықтыру", classes: "8Г, 8Д", shift: 1, status: "pending" },
+            { id: 16, name: "Жумагали Д.", subject: "Химия", classes: "8А, 9В, 11Б", shift: 1, status: "pending" },
+            { id: 17, name: "Жұмабекова А.", subject: "Орыс тілі", classes: "9Б, 9Г, 9Д, 9Е, 10Б, 11А, 11Э", shift: 1, status: "pending" },
+            { id: 18, name: "Жұмаділла М.", subject: "Орыс тілі", classes: "9Д, 9Е, 10А, 10Э", shift: 1, status: "pending" },
+            { id: 19, name: "Ибрагимова П.", subject: "Қазақ тілі", classes: "8В, 8Г", shift: 1, status: "pending" },
+            { id: 20, name: "Калиева Ж.", subject: "Қазақ тілі", classes: "9М, 10А, 11Г", shift: 1, status: "pending" },
+            { id: 21, name: "Каналкаджаева Р.", subject: "Орыс тілі", classes: "8Г, 8Л, 9Б, 10А, 10Г", shift: 1, status: "pending" },
+            { id: 22, name: "Қайбалдинова Ә.", subject: "Орыс тілі", classes: "9Г, 9М, 10Г, 11Э, 11Б, 11Г", shift: 1, status: "pending" },
+            { id: 23, name: "Кодиров М.", subject: "Математика", classes: "8Е, 9Д, 10А, 11А, 11Э", shift: 1, status: "pending" },
+            { id: 24, name: "Койлыбаевна Ә.", subject: "Математика", classes: "8В, 8Л, 9В, 9М, 11В", shift: 1, status: "pending" },
+            { id: 25, name: "Копбаева Ғ.", subject: "Орыс тілі", classes: "8А, 8А, 8Б, 8Д, 8Е, 8Л", shift: 1, status: "pending" },
+            { id: 26, name: "Кумисбекова Г.", subject: "Қазақ тілі", classes: "8А, 8Е", shift: 1, status: "pending" },
+            { id: 27, name: "Марипов Улугбек", subject: "География", classes: "8А, 8Г, 8Д, 9В, 11А, 11Э, 11Б, 11В, 11Г", shift: 1, status: "pending" },
+            { id: 28, name: "Мухамеджанова А.", subject: "Қазақстан тарихы", classes: "8В, 8Л, 9В, 10Б", shift: 1, status: "pending" },
+            { id: 29, name: "Нарзуллаева Н.", subject: "Биология", classes: "8Д", shift: 1, status: "pending" },
+            { id: 30, name: "Нуртас М.", subject: "География", classes: "8А, 8Л, 9Б, 9Г, 9Д, 9Е, 10А, 10Э, 10Б", shift: 1, status: "pending" },
+            { id: 31, name: "Нуритдиновна Г.", subject: "Ағылшын тілі", classes: "8В, 8В, 9Б, 9В, 9М, 10Б, 11Б, 11В", shift: 1, status: "pending" },
+            { id: 32, name: "Өмірзақ Б.", subject: "Математика", classes: "8Л, 9Е, 10Г", shift: 1, status: "pending" },
+            { id: 33, name: "Оралбаева А.", subject: "Информатика", classes: "8А, 8В, 8Г, 8Д, 10А, 11Г", shift: 1, status: "pending" },
+            { id: 34, name: "Пернехан А.", subject: "Биология", classes: "8А, 8Е, 11А", shift: 1, status: "pending" },
+            { id: 35, name: "Пошанова М.", subject: "Математика", classes: "8А, 11Г", shift: 1, status: "pending" },
+            { id: 36, name: "Ромаш Н.", subject: "Биология", classes: "9В, 9М, 10Б, 10В, 11Б, 11В", shift: 1, status: "pending" },
+            { id: 37, name: "Садыкова Г.", subject: "Қазақстан тарихы", classes: "8Г, 8Л, 9Г, 10А, 10Э, 11Э, 11Г", shift: 1, status: "pending" },
+            { id: 38, name: "Сейденов Б.", subject: "Дене шынықтыру", classes: "8Е, 9Д, 10А, 10Э, 10В, 10Г, 11Г", shift: 1, status: "pending" },
+            { id: 39, name: "Сейілхан Ж.", subject: "Химия", classes: "8Д, 9Г, 9Д, 10Э", shift: 1, status: "pending" },
+            { id: 40, name: "Слабек Е.", subject: "Физика/Дене ш.", classes: "8А, 8А, 8Л, 9Б, 9Г, 11А, 11Э, 11Б", shift: 1, status: "pending" },
+            { id: 41, name: "Султанова Г.", subject: "Қазақ тілі", classes: "8Г, 9Г, 11А, 11Э", shift: 1, status: "pending" },
+            { id: 42, name: "Сыздыкова А.", subject: "Биология", classes: "8Л, 9Б, 9Г, 9Е, 11Г", shift: 1, status: "pending" },
+            { id: 43, name: "Таскошай А.", subject: "Ағылшын тілі", classes: "8Л, 9В, 10А, 10Б, 10Г, 11А, 11Э", shift: 1, status: "pending" },
+            { id: 44, name: "Тастемирова Г.", subject: "Информатика", classes: "8В, 8Л, 9Б, 9В, 9Г, 9Е", shift: 1, status: "pending" },
+            { id: 45, name: "Тойшыбай М.", subject: "Математика", classes: "8Г, 8Д, 11А", shift: 1, status: "pending" },
+            { id: 46, name: "Тулентаева Г.", subject: "Қазақ тілі", classes: "9Б, 9В, 10Э, 10Б, 11В", shift: 1, status: "pending" },
+            { id: 47, name: "Усенов Даулет", subject: "Қазақстан тарихы", classes: "8А, 9Б, 9М, 10В, 11Э", shift: 1, status: "pending" },
+            { id: 48, name: "Усенов Улугбек", subject: "География", classes: "8В, 8Л, 9М, 10В", shift: 1, status: "pending" },
+            { id: 49, name: "Утеубеков С.", subject: "Математика", classes: "9Б, 10Б, 10В, 11Б", shift: 1, status: "pending" },
+            { id: 50, name: "Утешов Д.", subject: "Алғашқы әскер", classes: "10А, 10Э, 10Б, 10В, 10Г, 11А, 11Э, 11Б, 11В, 11Г", shift: 1, status: "pending" },
+            { id: 51, name: "Шакирова Б.", subject: "Орыс тілі", classes: "9Б, 9В, 10В, 11А", shift: 1, status: "pending" },
+
+            // 2-ші Ауысым Мұғалімдері (5-7 сыныптар)
+            { id: 52, name: "Абдиталит А.", subject: "Химия", classes: "7Б, 7В, 7Е, 7Ж", shift: 2, status: "pending" },
+            { id: 53, name: "Абдурахманова Ж.", subject: "Ағылшын тілі", classes: "6Г, 7Г, 7Е, 7Ж", shift: 2, status: "pending" },
+            { id: 54, name: "Ажибекова М.", subject: "Информатика", classes: "5Г, 6Б, 6Д, 7Б, 7Л", shift: 2, status: "pending" },
+            { id: 55, name: "Алибекова Ғ.", subject: "Қазақстан тарихы", classes: "6А, 7Б, 7М", shift: 2, status: "pending" },
+            { id: 56, name: "Алишерова С.", subject: "Ағылшын тілі", classes: "5Г, 5Д, 6А, 6Б, 7Е", shift: 2, status: "pending" },
+            { id: 57, name: "Амиралиев А.", subject: "Дене шынықтыру", classes: "5А, 5Б, 5Г, 7Е, 7Ж", shift: 2, status: "pending" },
+            { id: 58, name: "Аркалык А.", subject: "Қазақ тілі", classes: "6А, 6Д, 6Е, 7Г", shift: 2, status: "pending" },
+            { id: 59, name: "Артыкбаева Г.", subject: "Қазақ тілі", classes: "5Ж, 6Е, 7Е, 7М", shift: 2, status: "pending" },
+            { id: 60, name: "Ахметов М.", subject: "Дене шынықтыру", classes: "5Б, 5В, 6Б, 6В", shift: 2, status: "pending" },
+            { id: 61, name: "Аюханов Б.", subject: "Дене шынықтыру", classes: "6А, 6Г, 6Д, 7А, 7Б", shift: 2, status: "pending" },
+            { id: 62, name: "Бабаханов Б.", subject: "Дене шынықтыру", classes: "7Б, 7В, 7Л", shift: 2, status: "pending" },
+            { id: 63, name: "Байдуйсенова Ә.", subject: "Орыс тілі", classes: "5Г, 6Д, 7Л, 7М", shift: 2, status: "pending" },
+            { id: 64, name: "Батырбеков Е.", subject: "Қазақ тілі", classes: "6В, 6М", shift: 2, status: "pending" },
+            { id: 65, name: "Билал М.", subject: "Қазақ тілі", classes: "6Б, 6В, 6Г", shift: 2, status: "pending" },
+            { id: 66, name: "Досмаханова А.", subject: "Қазақ тілі", classes: "7Б, 7М", shift: 2, status: "pending" },
+            { id: 67, name: "Дуйсенбеку Л.", subject: "Ағылшын тілі", classes: "5Л, 6В, 6М, 7В", shift: 2, status: "pending" },
+            { id: 68, name: "Есполова А.", subject: "Орыс тілі", classes: "6В, 7А, 7Е", shift: 2, status: "pending" },
+            { id: 69, name: "Еримбетова Ғ.", subject: "Информатика", classes: "5Г, 5Д, 7А, 7В, 7Е", shift: 2, status: "pending" },
+            { id: 70, name: "Жанылок А.", subject: "Еңбек", classes: "5А, 5Б, 5В, 6Б, 6М, 7А, 7Ж", shift: 2, status: "pending" },
+            { id: 71, name: "Жолабаева Н.", subject: "Орыс тілі", classes: "6А, 6Б, 7Г, 7Е, 7Ж", shift: 2, status: "pending" },
+            { id: 72, name: "Жорабек Т.", subject: "Информатика", classes: "5Б, 5Ж, 6В, 6Е, 6М", shift: 2, status: "pending" },
+            { id: 73, name: "Исабекова Ж.", subject: "Орыс тілі", classes: "5Д, 6Б, 6Г, 6Д, 6Е", shift: 2, status: "pending" },
+            { id: 74, name: "Кадырхан А.", subject: "Ағылшын тілі", classes: "5А, 5Б, 5Д, 6Е", shift: 2, status: "pending" },
+            { id: 75, name: "Камал А.", subject: "Биология", classes: "6Б, 6В, 6М, 7Б, 7В, 7Л", shift: 2, status: "pending" },
+            { id: 76, name: "Карибаева Ж.", subject: "Математика", classes: "5Г, 5Ж, 7А, 7Ж", shift: 2, status: "pending" },
+            { id: 77, name: "Касайбек А.", subject: "Ағылшын тілі", classes: "7А, 7Е, 7Ж", shift: 2, status: "pending" },
+            { id: 78, name: "Кенжегулова Ә.", subject: "Математика", classes: "5В, 6В, 6М", shift: 2, status: "pending" },
+            { id: 79, name: "Макашева А.", subject: "Ағылшын тілі", classes: "5Ж", shift: 2, status: "pending" },
+            { id: 80, name: "Марат А.", subject: "Қазақстан тарихы", classes: "5Б, 5Ж, 6Е, 7Г", shift: 2, status: "pending" },
+            { id: 81, name: "Мацай О.", subject: "Орыс тілі", classes: "5А, 5Б, 5Ж, 6Б, 6М", shift: 2, status: "pending" },
+            { id: 82, name: "Маханбетова М.", subject: "Орыс тілі", classes: "5А, 5Б, 5В, 5Д, 5Ж, 5Л", shift: 2, status: "pending" },
+            { id: 83, name: "Мелдехан Т.", subject: "Информатика", classes: "5В, 5Л, 6А, 6Б, 6Г, 7Л, 7М", shift: 2, status: "pending" },
+            { id: 84, name: "Монбеков С.", subject: "Дене шынықтыру", classes: "6Е, 7В, 7Г", shift: 2, status: "pending" },
+            { id: 85, name: "Накыпбекова Г.", subject: "Қазақ тілі", classes: "5А, 5В, 5Л", shift: 2, status: "pending" },
+            { id: 86, name: "Нариетов Б.", subject: "Дене шынықтыру", classes: "5Д, 5Ж, 5Л, 7Е", shift: 2, status: "pending" },
+            { id: 87, name: "Нарзен Ж.", subject: "Биология", classes: "5Б, 5В, 6М, 7Г, 7Е", shift: 2, status: "pending" },
+            { id: 88, name: "Нурмаханбетова Г.", subject: "Математика", classes: "6А, 6Б, 7Г", shift: 2, status: "pending" },
+            { id: 89, name: "Онбаев С.", subject: "Еңбек", classes: "5Г, 5Ж, 6А, 6В, 6Г, 6Д, 6Е, 6М, 7Г, 7Е, 7Л", shift: 2, status: "pending" },
+            { id: 90, name: "Примаш Б.", subject: "Ағылшын тілі", classes: "6М, 7Б, 7Л, 7М", shift: 2, status: "pending" },
+            { id: 91, name: "Расулова М.", subject: "Қазақ тілі", classes: "5В, 5Г, 6Б", shift: 2, status: "pending" },
+            { id: 92, name: "Рахымбай Г.", subject: "Еңбек", classes: "5А, 5В, 5Г, 5Д, 5Л, 6Б, 7Б, 7Ж", shift: 2, status: "pending" },
+            { id: 93, name: "Рысбек С.", subject: "Ағылшын тілі", classes: "5Б, 5Г, 6Б, 6Д", shift: 2, status: "pending" },
+            { id: 94, name: "Султанбаева А.", subject: "Ағылшын тілі", classes: "5Б, 5В, 6М, 7Б", shift: 2, status: "pending" },
+            { id: 95, name: "Тайланова А.", subject: "Информатика", classes: "5А, 5Б, 5Д, 7Ж", shift: 2, status: "pending" },
+            { id: 96, name: "Талипова Г.", subject: "Ағылшын тілі", classes: "6Б, 6В, 6М, 7В, 7Л", shift: 2, status: "pending" },
+            { id: 97, name: "Толеген Д.", subject: "Информатика", classes: "6В, 6Г, 6Д, 6Е, 7А, 7Б, 7В, 7М", shift: 2, status: "pending" },
+            { id: 98, name: "Толегенова Азиз", subject: "Қазақ тілі", classes: "5Б, 7А, 7Ж", shift: 2, status: "pending" },
+            { id: 99, name: "Тумбаев Е.", subject: "Қазақстан тарихы", classes: "5А, 5Г, 5Д, 6Г, 6Д", shift: 2, status: "pending" },
+            { id: 100, name: "Турдиева Г.", subject: "Математика", classes: "6Б, 7Б, 7В", shift: 2, status: "pending" },
+            { id: 101, name: "Туздыбекова А.", subject: "Математика", classes: "6Б", shift: 2, status: "pending" },
+            { id: 102, name: "Хасанов М.", subject: "Математика", classes: "6Г, 6Д, 6Е", shift: 2, status: "pending" },
+            { id: 103, name: "Шайық А.", subject: "Биология", classes: "5А, 5Г, 5Ж, 6Б", shift: 2, status: "pending" },
+            { id: 104, name: "Шаукетова Д.", subject: "Ағылшын тілі", classes: "5А, 5Б, 5В, 6А, 7А, 7Г, 7Ж", shift: 2, status: "pending" },
+            { id: 105, name: "Шадман Н.", subject: "Ағылшын тілі", classes: "6А, 6Г, 6Д, 6Е", shift: 2, status: "pending" }
+        ];
+
+        let currentRole = null; // 'shift1', 'shift2', 'admin'
+
+        // Жүйеге кіру
+        function login(role) {
+            currentRole = role;
+            document.getElementById('authPage').classList.add('hidden');
+            document.getElementById('dashboardPage').classList.remove('hidden');
+            document.getElementById('logoutBtn').classList.remove('hidden');
+
+            const badge = document.getElementById('roleBadge');
+            if (role === 'shift1') {
+                badge.className = "bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-semibold";
+                badge.innerText = "1-ші Ауысым Завучы";
+                document.getElementById('shiftFilter').value = "1";
+            } else if (role === 'shift2') {
+                badge.className = "bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-semibold";
+                badge.innerText = "2-ші Ауысым Завучы";
+                document.getElementById('shiftFilter').value = "2";
+            } else {
+                badge.className = "bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-semibold";
+                badge.innerText = "Директор / Администратор";
+                document.getElementById('shiftFilter').value = "all";
+            }
+
+            renderTable();
+        }
+
+        // Жүйеден шығу
+        function logout() {
+            currentRole = null;
+            document.getElementById('authPage').classList.remove('hidden');
+            document.getElementById('dashboardPage').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.add('hidden');
+            document.getElementById('roleBadge').className = "bg-indigo-700 px-3 py-1 rounded-full text-xs font-semibold";
+            document.getElementById('roleBadge').innerText = "Жүйеге кіріңіз";
+        }
+
+        // Мәртебені ауыстыру
+        function setStatus(id, newStatus) {
+            const teacher = teachersData.find(t => t.id === id);
+            if (teacher) {
+                // Ауысымдық құқықты тексеру
+                if (currentRole === 'shift1' && teacher.shift !== 1) {
+                    alert("Сіз тек 1-ші ауысым мұғалімдерін белгілей аласыз!");
+                    return;
+                }
+                if (currentRole === 'shift2' && teacher.shift !== 2) {
+                    alert("Сіз тек 2-ші ауысым мұғалімдерін белгілей аласыз!");
+                    return;
+                }
+
+                teacher.status = newStatus;
+                renderTable();
+            }
+        }
+
+        // Кестені визуализациялау
+        function renderTable() {
+            const tbody = document.getElementById('teacherTableBody');
+            tbody.innerHTML = '';
+
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+            const shiftVal = document.getElementById('shiftFilter').value;
+            const statusVal = document.getElementById('statusFilter').value;
+
+            let filtered = teachersData.filter(t => {
+                const matchesSearch = t.name.toLowerCase().includes(searchValue) || t.subject.toLowerCase().includes(searchValue);
+                const matchesShift = shiftVal === 'all' || t.shift.toString() === shiftVal;
+                const matchesStatus = statusVal === 'all' || t.status === statusVal;
+                return matchesSearch && matchesShift && matchesStatus;
+            });
+
+            filtered.forEach((teacher, idx) => {
+                const tr = document.createElement('tr');
+                
+                // Шектеу қою (Завуч өз ауысымы болмаса кнопкалар бұғатталады)
+                const isDisabled = (currentRole === 'shift1' && teacher.shift !== 1) || (currentRole === 'shift2' && teacher.shift !== 2);
+                const disabledAttr = isDisabled ? 'disabled opacity-30 cursor-not-allowed' : '';
+
+                let statusBadge = '';
+                let rowBg = '';
+
+                switch (teacher.status) {
+                    case 'pending':
+                        statusBadge = `<span class="bg-slate-100 text-slate-600 border border-slate-300 px-2.5 py-1 rounded-full text-xs font-semibold">⚪ Күтілуде</span>`;
+                        rowBg = 'bg-white hover:bg-slate-50';
+                        break;
+                    case 'no_lesson':
+                        statusBadge = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full text-xs font-semibold">🟢 Бүгін сабағы жоқ</span>`;
+                        rowBg = 'bg-emerald-50/40';
+                        break;
+                    case 'normal':
+                        statusBadge = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-1 rounded-full text-xs font-semibold">🟢 Қалыпты (ҚМЖ бар)</span>`;
+                        rowBg = 'bg-emerald-50/40';
+                        break;
+                    case 'no_plan':
+                        statusBadge = `<span class="bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1 rounded-full text-xs font-semibold">🟡 1-ші ескерту (ҚМЖ жоқ)</span>`;
+                        rowBg = 'bg-amber-50/40';
+                        break;
+                    case 'late':
+                        statusBadge = `<span class="bg-orange-100 text-orange-800 border border-orange-300 px-2.5 py-1 rounded-full text-xs font-semibold">🟠 2-ші ескерту (Кешікті)</span>`;
+                        rowBg = 'bg-orange-50/40';
+                        break;
+                    case 'absent':
+                        statusBadge = `<span class="bg-rose-100 text-rose-800 border border-rose-300 px-2.5 py-1 rounded-full text-xs font-semibold">🔴 3-ші ескерту (Себепсіз кірмеді)</span>`;
+                        rowBg = 'bg-rose-50/40';
+                        break;
+                }
+
+                tr.className = `${rowBg} transition duration-150`;
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-medium text-slate-500">${idx + 1}</td>
+                    <td class="py-3 px-4 font-semibold text-slate-900">${teacher.name}</td>
+                    <td class="py-3 px-4 text-slate-600">${teacher.subject}</td>
+                    <td class="py-3 px-4 text-slate-600"><span class="bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs font-mono">${teacher.classes}</span></td>
+                    <td class="py-3 px-4">
+                        <span class="px-2 py-0.5 rounded text-xs font-semibold ${teacher.shift === 1 ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}">
+                            ${teacher.shift}-ші ауысым
+                        </span>
+                    </td>
+                    <td class="py-3 px-4">${statusBadge}</td>
+                    <td class="py-3 px-4 text-center">
+                        <div class="flex items-center justify-center space-x-1">
+                            <button onclick="setStatus(${teacher.id}, 'pending')" ${disabledAttr} title="⚪ Күтілуде" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs font-bold transition">⚪</button>
+                            <button onclick="setStatus(${teacher.id}, 'no_lesson')" ${disabledAttr} title="🟢 Бүгін сабағы жоқ" class="px-2 py-1 bg-emerald-200 hover:bg-emerald-300 rounded text-xs font-bold transition">🟢 Сабақ жоқ</button>
+                            <button onclick="setStatus(${teacher.id}, 'normal')" ${disabledAttr} title="🟢 Қалыпты / ҚМЖ бар" class="px-2 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-xs font-bold transition">🟢 ҚМЖ бар</button>
+                            <button onclick="setStatus(${teacher.id}, 'no_plan')" ${disabledAttr} title="🟡 1-ші ескерту (ҚМЖ жоқ)" class="px-2 py-1 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded text-xs font-bold transition">🟡 ҚМЖ жоқ</button>
+                            <button onclick="setStatus(${teacher.id}, 'late')" ${disabledAttr} title="🟠 2-ші ескерту (Кешікті)" class="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-bold transition">🟠 Кешікті</button>
+                            <button onclick="setStatus(${teacher.id}, 'absent')" ${disabledAttr} title="🔴 3-ші ескерту (Сабаққа кірмеді)" class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold transition">🔴 Кірмеді</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            updateStats();
+        }
+
+        // Статистиканы жаңарту
+        function updateStats() {
+            document.getElementById('statTotal').innerText = teachersData.length;
+            document.getElementById('statPending').innerText = teachersData.filter(t => t.status === 'pending').length;
+            document.getElementById('statOk').innerText = teachersData.filter(t => t.status === 'normal' || t.status === 'no_lesson').length;
+            document.getElementById('statWarn').innerText = teachersData.filter(t => t.status === 'no_plan' || t.status === 'late').length;
+            document.getElementById('statAbsent').innerText = teachersData.filter(t => t.status === 'absent').length;
+        }
+
+        function filterTeachers() {
+            renderTable();
+        }
+
+        // Есепті Excel форматында жүктеп алу (.xlsx)
+        function exportToExcel() {
+            const reportData = teachersData.map((t, index) => {
+                let statusKaz = '';
+                switch (t.status) {
+                    case 'pending': statusKaz = '⚪ Күтілуде'; break;
+                    case 'no_lesson': statusKaz = '🟢 Бүгін сабағы жоқ'; break;
+                    case 'normal': statusKaz = '🟢 Қалыпты (ҚМЖ бар)'; break;
+                    case 'no_plan': statusKaz = '🟡 1-ші ескерту (ҚМЖ жоқ)'; break;
+                    case 'late': statusKaz = '🟠 2-ші ескерту (Сабаққа кешікті)'; break;
+                    case 'absent': statusKaz = '🔴 3-ші ескерту (Себепсіз сабаққа кірмеді)'; break;
+                }
+                return {
+                    "№": index + 1,
+                    "Мұғалімнің Аты-жөні": t.name,
+                    "Пәні": t.subject,
+                    "Сыныптары": t.classes,
+                    "Ауысым": `${t.shift}-ші ауысым`,
+                    "Бақылау Мәртебесі": statusKaz
+                };
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(reportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Завуч Есебі");
+
+            // Баған енін реттеу
+            worksheet['!cols'] = [
+                { wch: 5 },
+                { wch: 25 },
+                { wch: 20 },
+                { wch: 30 },
+                { wch: 15 },
+                { wch: 35 }
+            ];
+
+            const today = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(workbook, `Zavuch_Esebi_${today}.xlsx`);
+        }
+    </script>
+</body>
+</html>
